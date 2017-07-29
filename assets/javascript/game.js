@@ -48,7 +48,7 @@ const homeScreen =
 `
 
 // body sections should be 5 characters wide
-var body = {
+const body = {
    empty: [
    '<span id="body0">     </span>',
    '<span id="body1">     </span>',
@@ -113,16 +113,16 @@ var body = {
 
 
 // "You Win/Lose" statement should be 9 characters wide
-var winText = '<span class="blinking-text">You Win! </span>   Play Again? (y/n)';
-var loseText = '<span class="blinking-text">You Lose!</span>   Play Again? (y/n)';
-var endGameOK = '             OK.             ';
-var endGame = '            Wait.            ';
+const winText = '<span class="blinking-text">You Win! </span>   Play Again? (y/n)';
+const loseText = '<span class="blinking-text">You Lose!</span>   Play Again? (y/n)';
+const gameReadyText = '             OK.             ';
+const gameWaitText = '            Wait.            ';
 
 //game screen for new word
 const hangmanScreen = 
 `                                                                         
 
-                      <span id="end-game">${endGame}</span>                      
+                      <span id="end-game">${gameWaitText}</span>                      
   
            
           [++]=====[+]               
@@ -280,6 +280,9 @@ game.prototype.playAgain = function(answer) {
        User Interface       
 \***************************/
 
+//consider refactoring some ui methods to not create 
+//so many functions internally (for animations mostly)
+
 //updates visual user interface
 //element arg is the DOM element to use for UI
 function ui(element, callback){
@@ -293,7 +296,8 @@ function ui(element, callback){
    //change screen to homescreen 
    setTimeout( this.changeScreen.bind(this, 0, this.homeScreen, callback, 150));
 }
-//recursively changes screen one line at a time
+//recursively changes screen one line at a time 
+//then invokes callback
 //line = current line being set,
 //screenArr is the array of lines for new screen
 ui.prototype.changeScreen = function(line, screenArr, callback){
@@ -302,24 +306,27 @@ ui.prototype.changeScreen = function(line, screenArr, callback){
    }
    else{
       document.getElementById(`l${line}`).innerHTML = screenArr[line];
-      setTimeout(this.changeScreen.bind(this, line + 1, screenArr, callback), 75);
+      setTimeout(this.changeScreen.bind(
+         this, line + 1, screenArr, callback
+      ), 75);
    }
 }
 //set display of wins/losses, word, and ready for input
-//animated one at a time
+//animated one at a time: wins/losses > word > ready
 ui.prototype.initGame = function(game){
-   var a = () => {
+   //animation frames from A to B
+   var initA = () => {
       this.updateWins(game);
-      setTimeout(b, 500);
+      setTimeout(initB, 500);
    }
-   var b = () => {
+   var initB = () => {
       this.updateWord(game);
-      setTimeout(c, 500);
+      setTimeout(initC, 500);
    }
-   var c = () => {
+   var initC = () => {
       this.setReady(game);
    }
-   a();
+   initA();
 }
 //updates word on display as letters are guessed correctly
 ui.prototype.updateWord = function(game){
@@ -341,17 +348,21 @@ ui.prototype.updateBody = function(partNum, html){
 }
 //sets interface ready for input 
 ui.prototype.setReady = function(game){
-   document.getElementById('end-game').innerHTML = endGameOK;
+   document.getElementById('end-game').innerHTML = gameReadyText;
    game.ready = true; 
 }
 //sets interface to not accept user input
 ui.prototype.setWait = function(game){
-   document.getElementById('end-game').innerHTML = endGame;
+   document.getElementById('end-game').innerHTML = gameWaitText;
    game.ready = false; 
 }
-//updates top text to say you win and sets body to dance
+//updates interface to display winner & ready for input
 ui.prototype.setWin = function(game){
+   //set top text to say you win
    document.getElementById('end-game').innerHTML = winText;
+
+   //if stick guy has arms, set his torso to dance
+   //if 3 guesses left, only one arm dances 
    if( game.guessesLeft === 3){
       this.updateBody(3, body.torso.upperDance[0]);
       this.updateBody(4, body.torso.lowerDance[0]);
@@ -362,39 +373,49 @@ ui.prototype.setWin = function(game){
    }
    game.ready = true; 
 }
-//updates top text to say you lost
+//updates interface to display loser & ready for input
 ui.prototype.setLoss = function(game){
    document.getElementById('end-game').innerHTML = loseText;
    game.ready = true; 
 }
 //update interface when user chooses right letter
+// head(if exists) > word > ready
 ui.prototype.goodChoice = function(game){
+   //sets interface to accept input again
    var ready = () => {
+      //if game is over, track win and display win screen
       if( game.isFinished ){
-         //animate more
-         //change guy to dance 
          this.updateWins(game);
          this.setWin(game);
       }
+      //otherwise continue game
       else{
+         //only if there is a head, change it back to normal
          if (game.guessesLeft <=5){
             this.updateBody(1, body.heads.normal);
          }
          this.setReady(game);
       }
    }
-   //iff guesses left is 6 just update word then ready
+
+   //updates word display and calls ready with timeout 
    var word = () => {
       this.updateWord(game);
       setTimeout(ready, 500);
    }
+
+   //!function starts doing stuff here
+   //if stick figure has head, update it to be happy
    if (game.guessesLeft <= 5){
       this.updateBody(1, body.heads.happy);
    }
+
    setTimeout(word, 500);
 }
 //update interface when user chose wrong letter
+// head(if exists) > miss > ready
 ui.prototype.badChoice = function(game){
+   //death animations (deathA > deathB > end)
    var deathA = () => {
       for( let i = 0; i < 9; i++){
          this.updateBody(i, body.death[0][i]);
@@ -408,46 +429,60 @@ ui.prototype.badChoice = function(game){
       setTimeout(end, 500);
    }
    var end = () => {
+      //track loss and display loss screen
       this.updateWins(game);
       this.setLoss(game);
    }
+
+   //sets interface to accept input again
    var ready = () => {
+      //if game is over, update head to uhoh and 
+      //start death animation
       if( game.isFinished ){
          this.updateBody(1, body.heads.uhoh);
-         //do death animation
          setTimeout(deathA, 500);
       }
+      //otherwise change head to normal and continue game
       else{
          this.updateBody(1, body.heads.normal);
          this.setReady(game);
       }
    }
-   //iff guesses left is 6 just update word then ready
+
+   //updates misses display and changes body
+   //based on how many guesses are left
+   //(head > body > right arm > ...)
    var miss = () => {
       this.updateMisses(game);
       switch(game.guessesLeft){
+         //add head
          case 5:
             this.updateBody(0, body.hair);
             this.updateBody(1, body.heads.sad);
             break;
+         //add body
          case 4:
             this.updateBody(2, body.neck);
             this.updateBody(3, body.torso.upper[0]);
             this.updateBody(4, body.torso.lower[0]);
             this.updateBody(5, body.hips);
             break;
+         //add right arm (our left)
          case 3:
             this.updateBody(3, body.torso.upper[1]);
             this.updateBody(4, body.torso.lower[1]);
             break;
+         //add left arm (our right)
          case 2:
             this.updateBody(3, body.torso.upper[2]);
             this.updateBody(4, body.torso.lower[2]);
             break;
+         //add right leg (our left)
          case 1:
             this.updateBody(6, body.legs.upper[0]);
             this.updateBody(7, body.legs.lower[0]);
             break;
+         //add left leg (our right)
          case 0:
             this.updateBody(6, body.legs.upper[1]);
             this.updateBody(7, body.legs.lower[1]);
@@ -455,9 +490,14 @@ ui.prototype.badChoice = function(game){
       }
       setTimeout(ready, 500);
    }
+
+
+   //!function starts doing stuff here
+   //if stick figure has head, update it to be sad
    if (game.guessesLeft < 5){
       this.updateBody(1, body.heads.sad);
    }
+
    setTimeout(miss, 500);
 }
 
