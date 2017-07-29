@@ -148,7 +148,18 @@ const wordList = ['PacMan',
                   'Tetris',
                   'Doom',
                   'Mortal Kombat',
-                  'Space Invaders'
+                  'Space Invaders',
+                  'Dig Dug',
+                  'Metroid',
+                  'Final Fantasy',
+                  'Duck Hunt',
+                  'Lemmings',
+                  'Crystal Quest',
+                  'Pong',
+                  'Street Fighter',
+                  'Mega Man',
+                  'Frogger',
+                  'Tekken',
                  ];
 
 
