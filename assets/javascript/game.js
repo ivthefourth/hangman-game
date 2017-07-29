@@ -1,8 +1,7 @@
+(function(){
 
-
-//split by newline (\n) and replace each line starting from top... join with newlines
-// top line must be full length
-
+//blank screen is shown on page load, then
+//replaced with home screen line by line
 const blankScreen = 
 `<span id="l0">                                                                         </span>
 <span id="l1">                                                                         </span>
@@ -24,6 +23,8 @@ const blankScreen =
 <span id="l17">                                                                         </span>
 <span id="l18">                                                                         </span>
 `
+//ui screen is 19 characters high
+//ui screen is 73 characters wide
 const homeScreen = 
 `                                                                         
 
@@ -45,27 +46,9 @@ const homeScreen =
                
 
 `
-//ui screen is 19 characters high
-//ui screen is 73 characters wide
 
-// "You Win/Lose" statement should be 9 characters wide
 // body sections should be 5 characters wide
-
-//word should be maximum 14 characters
-
-var body = [
-" ,;, ",
-"<span class=\"blinking-eyes\"><span class=\"open\">('_')</span><span class=\"closed\">(-_-)</span></span>",
-"  |  ",
-" /M\\ ",
-"/ H \\",
-"  X  ",
-" / \\ ",
-"/   \\",
-"     ",
-] 
-
-body = {
+var body = {
    empty: [
    '<span id="body0">     </span>',
    '<span id="body1">     </span>',
@@ -77,44 +60,65 @@ body = {
    '<span id="body7">     </span>',
    '<span id="body8">     </span>',
    ],
-   
-   /*normal: [
-   " ,;, ",
-   "<span class=\"blinking-eyes\"><span class=\"open\">('_')</span><span class=\"closed\">(-_-)</span></span>",
-   "  |  ",
-   " /M\\ ",
-   "/ H \\",
-   "  X  ",
-   " / \\ ",
-   "/   \\",
-   "     ",
-   ],*/
    hair: " ,;, ",
    heads: {
       normal: "<span class=\"blinking-eyes\"><span class=\"open\">('_')</span><span class=\"closed\">(-_-)</span></span>",
       happy: "(^_^)",
-      sad: "(-,-)",
+      sad: "(;_;)",
+      uhoh: "(o_o)"
    },
    neck: "  |  ",
    torso: {
       upper: ["  M  ", " /M  ", " /M\\ "],
-      lower: ["  H  ", "/ H  ", "/ H \\"]
+      lower: ["  H  ", "/ H  ", "/ H \\"],
+      upperDance: [
+                   "<span class=\"dance\">     <span class=\"dance-a\">\\/M  </span><span class=\"dance-b\"> /M  </span></span>",
+                   "<span class=\"dance\">     <span class=\"dance-a\">\\/M\\ </span><span class=\"dance-b\"> /M\\/</span></span>"
+                   ],
+      lowerDance: [
+                   "<span class=\"dance\">     <span class=\"dance-a\">  H  </span><span class=\"dance-b\">/ H  </span></span>",
+                   "<span class=\"dance\">     <span class=\"dance-a\">  H \\</span><span class=\"dance-b\">/ H  </span></span>"
+                   ]
    },
    hips: "  X  ",
    legs: {
       upper: [" /   ", " / \\ "],
       lower: ["/    ", "/   \\"]
-   }
+   },
+   death: [
+      [
+      "  |  ",
+      " ,;, ",
+      "(-,-)",
+      "  |  ",
+      " /M\\ ",
+      "/ H \\",
+      "  X  ",
+      " / \\ ",
+      "/   \\"
+      ],
+      [
+      "  |  ",
+      " ,;, ",
+      "(x_x)",
+      "  |  ",
+      " /M\\ ",
+      " \\H/ ",
+      "  X  ",
+      " | | ",
+      " | | "
+      ]
+   ]
 }
-//    (-_-)     ('_') > (o_o) > (-‸-) > (x‸x)    (-‸-) <sad when miss
 
 
+// "You Win/Lose" statement should be 9 characters wide
 var winText = '<span class="blinking-text">You Win! </span>   Play Again? (y/n)';
 var loseText = '<span class="blinking-text">You Lose!</span>   Play Again? (y/n)';
+var endGameOK = '             OK.             ';
+var endGame = '            Wait.            ';
 
-var endGameOK = '             OK.             '
-var endGame = '            Wait.            '
-
+//game screen for new word
 const hangmanScreen = 
 `                                                                         
 
@@ -137,23 +141,31 @@ const hangmanScreen =
 
 `
 
+//word should be maximum 14 characters long
+const wordList = ['PacMan',
+                  'Super Mario',
+                  'Donkey Kong',
+                  'Tetris',
+                  'Doom',
+                  'Mortal Kombat',
+                  'Space Invaders'
+                 ];
 
 
 
-const wordList = ['Simpsons', 
-                'Looney Tunes', 
-                'South Park',
-                'Family Guy',
-                'The Smurfs',
-               ];
 
 
+//returns random integer, inclusive 
+function randint(min, max) {
+   return min + Math.floor(Math.random() * (max - min + 1));
+}
 
-//hangman will start new instance of game object.
-//game object will have a gameEnd method which uses...
-//a callback function with an argument value that...
-// represents whether the game has been won 'hasWon' 
+/***************************\
+      Single Word Game
+\***************************/
 
+//game object for one word
+//each new word is a new game instance
 function game(word, ui, wins, losses, callback){
    //track wins and losses
    this.wins = wins;
@@ -175,7 +187,7 @@ function game(word, ui, wins, losses, callback){
    //word to guess
    this.word = word;
    this.wordArr = word.split('').map(
-      (l) => l.toLowerCase() 
+      (l) => l.toLowerCase()
    );
 
    //word to guess as displayed to user
@@ -192,19 +204,14 @@ function game(word, ui, wins, losses, callback){
    //used to update visual interface
    this.ui = ui;
 
+   //callback to call when user chooses wether to play a new game
    this.callback = callback;
 
-
-
-   console.log('game');
-   console.log(word);
-   //callback(false);
 }
-
 //guess a letter
 game.prototype.guess = function(letter) {
    //if guessed letter has not been guessed,
-   //add the letter to our guessed letters and proceed
+   //add the letter to our guessed letters and...
    if( this.guessedLetters.indexOf(letter) === -1){
 
       //disable input until animations finish
@@ -212,7 +219,7 @@ game.prototype.guess = function(letter) {
       this.ui.setWait(this);
       this.guessedLetters.push(letter);
 
-      //find all indices of guessed letter and push...
+      //find all indices of guessed letter in word and push
       //index value(s) to indices array
       let indices = [];
       for(let i = 0; i < this.wordArr.length; i++){
@@ -222,7 +229,8 @@ game.prototype.guess = function(letter) {
       }
 
       //if letter is found in our word,
-      //update word as seen by user 
+      //update word as seen by user replacing blanks with
+      //selected letter taken from original word (for case)
       if( indices.length ){
          indices.forEach((i) => {
             this.userArr[i] = this.word[i];
@@ -230,32 +238,27 @@ game.prototype.guess = function(letter) {
          var goodGuess = true;
       }
       //otherwise reduce guesses left by one,
-      //push letter to misses, and update hangman,
+      //and push letter to misses
       else{
          this.guessesLeft -= 1;
          this.misses.push(letter);
          goodGuess = false;
       }
 
-
-      console.log(...this.userArr);
-      console.log(...this.misses);
-
-      //check for win
+      //check for win, and update relevant state if it is
       if(this.userArr.join('') === this.word){
          this.isFinished = true;
          this.win = true;
          this.wins += 1;
-         console.log('winnar');
       } 
-      //check for loss
+      //check for loss, and update relevant state if it is
       else if( this.guessesLeft === 0){
          this.isFinished = true;
          this.win = false;
          this.losses += 1;
-         console.log('loser');
       }
 
+      //update interface
       if( goodGuess ){
          this.ui.goodChoice(this);
       }
@@ -264,24 +267,33 @@ game.prototype.guess = function(letter) {
       }
    }
 };
-
 //start a new game or back to home screen
 //answer true to play again, false to return home
 game.prototype.playAgain = function(answer) {
    this.callback(answer, this.win);
 };
 
+
+
+
+/***************************\
+       User Interface       
+\***************************/
+
 //updates visual user interface
 //element arg is the DOM element to use for UI
 function ui(element, callback){
+   //set ui to blank screen on page load
    element.innerHTML = blankScreen;
+
+   //stores homescreen and hangman game screen as arrays of individual lines
    this.homeScreen = homeScreen.split('\n');
    this.hangmanScreen = hangmanScreen.split('\n');
+
+   //change screen to homescreen 
    setTimeout( this.changeScreen.bind(this, 0, this.homeScreen, callback, 150));
-   element.innerHTML = blankScreen;
-   console.log(element);
-   console.log('ui');
 }
+//recursively changes screen one line at a time
 //line = current line being set,
 //screenArr is the array of lines for new screen
 ui.prototype.changeScreen = function(line, screenArr, callback){
@@ -293,6 +305,8 @@ ui.prototype.changeScreen = function(line, screenArr, callback){
       setTimeout(this.changeScreen.bind(this, line + 1, screenArr, callback), 75);
    }
 }
+//set display of wins/losses, word, and ready for input
+//animated one at a time
 ui.prototype.initGame = function(game){
    var a = () => {
       this.updateWins(game);
@@ -307,18 +321,21 @@ ui.prototype.initGame = function(game){
    }
    a();
 }
+//updates word on display as letters are guessed correctly
 ui.prototype.updateWord = function(game){
    document.getElementById('word').innerHTML = game.userArr.join(' ');
 }
+//updates display of letters that have been guessed but are not in word
 ui.prototype.updateMisses = function(game){
    document.getElementById('misses').innerHTML = game.misses.join(', ');
 }
-//updates both wins and losses
+//updates display for both wins and losses
 ui.prototype.updateWins = function(game){
    document.getElementById('wins').innerHTML = game.wins;
    document.getElementById('losses').innerHTML = game.losses;
 }
-//updates body parts
+//updates display of body parts
+//partnum is the number on the id of the element to be changed
 ui.prototype.updateBody = function(partNum, html){
    document.getElementById(`body${partNum}`).innerHTML = html;
 }
@@ -332,24 +349,27 @@ ui.prototype.setWait = function(game){
    document.getElementById('end-game').innerHTML = endGame;
    game.ready = false; 
 }
+//updates top text to say you win and sets body to dance
 ui.prototype.setWin = function(game){
    document.getElementById('end-game').innerHTML = winText;
+   if( game.guessesLeft === 3){
+      this.updateBody(3, body.torso.upperDance[0]);
+      this.updateBody(4, body.torso.lowerDance[0]);
+   }
+   else if( game.guessesLeft <= 2){
+      this.updateBody(3, body.torso.upperDance[1]);
+      this.updateBody(4, body.torso.lowerDance[1]);
+   }
    game.ready = true; 
 }
+//updates top text to say you lost
 ui.prototype.setLoss = function(game){
    document.getElementById('end-game').innerHTML = loseText;
    game.ready = true; 
 }
-//update interface when user chose right letter
+//update interface when user chooses right letter
 ui.prototype.goodChoice = function(game){
-   //happy face (if guesses left is <= 5,
-   //update word,
-   //normal face, (if guesses left is <= 5),
-   //back to ready
    var ready = () => {
-      if (game.guessesLeft <=5){
-         this.updateBody(1, body.heads.normal);
-      }
       if( game.isFinished ){
          //animate more
          //change guy to dance 
@@ -357,6 +377,9 @@ ui.prototype.goodChoice = function(game){
          this.setWin(game);
       }
       else{
+         if (game.guessesLeft <=5){
+            this.updateBody(1, body.heads.normal);
+         }
          this.setReady(game);
       }
    }
@@ -372,70 +395,98 @@ ui.prototype.goodChoice = function(game){
 }
 //update interface when user chose wrong letter
 ui.prototype.badChoice = function(game){
-   //sad face (if guesses left is < 5,
-   //update misses,
-   //normal face, (if guesses left is < 5),
-   //update limb,
-   //back to ready,
-   this.updateMisses(game);
-   this.setReady(game);
-   switch(game.guessesLeft){
-      case 5:
-         this.updateBody(0, body.hair);
-         this.updateBody(1, body.heads.normal);
-         break;
-      case 4:
-         this.updateBody(2, body.neck);
-         this.updateBody(3, body.torso.upper[0]);
-         this.updateBody(4, body.torso.lower[0]);
-         this.updateBody(5, body.hips);
-         break;
-      case 3:
-         this.updateBody(3, body.torso.upper[1]);
-         this.updateBody(4, body.torso.lower[1]);
-         break;
-      case 2:
-         this.updateBody(3, body.torso.upper[2]);
-         this.updateBody(4, body.torso.lower[2]);
-         break;
-      case 1:
-         this.updateBody(6, body.legs.upper[0]);
-         this.updateBody(7, body.legs.lower[0]);
-         break;
-      case 0:
-         this.updateBody(6, body.legs.upper[1]);
-         this.updateBody(7, body.legs.lower[1]);
-         break;
+   var deathA = () => {
+      for( let i = 0; i < 9; i++){
+         this.updateBody(i, body.death[0][i]);
+      }
+      setTimeout(deathB, 500);
    }
-   if( game.isFinished ){
+   var deathB = () => {
+      for( let i = 0; i < 9; i++){
+         this.updateBody(i, body.death[1][i]);
+      }
+      setTimeout(end, 500);
+   }
+   var end = () => {
       this.updateWins(game);
       this.setLoss(game);
    }
+   var ready = () => {
+      if( game.isFinished ){
+         this.updateBody(1, body.heads.uhoh);
+         //do death animation
+         setTimeout(deathA, 500);
+      }
+      else{
+         this.updateBody(1, body.heads.normal);
+         this.setReady(game);
+      }
+   }
+   //iff guesses left is 6 just update word then ready
+   var miss = () => {
+      this.updateMisses(game);
+      switch(game.guessesLeft){
+         case 5:
+            this.updateBody(0, body.hair);
+            this.updateBody(1, body.heads.sad);
+            break;
+         case 4:
+            this.updateBody(2, body.neck);
+            this.updateBody(3, body.torso.upper[0]);
+            this.updateBody(4, body.torso.lower[0]);
+            this.updateBody(5, body.hips);
+            break;
+         case 3:
+            this.updateBody(3, body.torso.upper[1]);
+            this.updateBody(4, body.torso.lower[1]);
+            break;
+         case 2:
+            this.updateBody(3, body.torso.upper[2]);
+            this.updateBody(4, body.torso.lower[2]);
+            break;
+         case 1:
+            this.updateBody(6, body.legs.upper[0]);
+            this.updateBody(7, body.legs.lower[0]);
+            break;
+         case 0:
+            this.updateBody(6, body.legs.upper[1]);
+            this.updateBody(7, body.legs.lower[1]);
+            break;
+      }
+      setTimeout(ready, 500);
+   }
+   if (game.guessesLeft < 5){
+      this.updateBody(1, body.heads.sad);
+   }
+   setTimeout(miss, 500);
 }
 
-//updatebody
-//finish game
 
+
+/***************************\
+     Main Hangman Object    
+\***************************/
 
 const hangman = {
    //when true, pressing any key starts new game
    //is set true after page is loaded and animations finish
    ready: false,
 
-   //copy words array, so it can be reset
+   //copy words array, so it can be reset if all words are played 
    words: wordList.slice(0),
+
+   //track wins and losses
    wins: 0,
    losses: 0,
 
    //stores current active game
-   //set null after game over (before new game)
+   //set null if user chooses not to play a new game
    currentGame: null,
-
-   //user interface object
 
    //callback from game when game is over
    //prepares this object for a new game
    gameFinished: function(playAgain, hasWon) {
+
       //track wins/losses
       if( hasWon ){
          this.wins += 1;
@@ -443,19 +494,23 @@ const hangman = {
       else{
          this.losses += 1;
       }
+
       //start a new game if they want to play again
       if(playAgain){
          this.startNewGame();
       }
       //back to homescreen if they dont want to play again
-      //reset data
       else{
+         //callback just sets this object to accept user input 
          callback = function(){this.ready = true }.bind(this);
+
+         //reset data to defaults
          this.ready = false;
          this.currentGame = null;
          this.wins = 0;
          this.losses = 0;
          this.words = wordList.slice(0);
+
          //update ui to home 
          this.ui.changeScreen.bind(this.ui, 0, this.ui.homeScreen, callback, 150)()
       }
@@ -473,26 +528,34 @@ const hangman = {
       }
 
       //get random word and start new game with this word
-      let word = this.words[randint(0, len - 1)];
-      this.words.splice(this.words.indexOf(word), 1);
+      let index = randint(0, len - 1);
+      let word = this.words[index];
+      //remove used word so you won't play it again
+      this.words.splice(index, 1);
       this.currentGame = new game(word, 
                                   this.ui, 
                                   this.wins,
                                   this.losses,
                                   this.gameFinished.bind(this)
                                  );
+      //change ui to show new hangman screen
       this.ui.changeScreen(0, 
                            this.ui.hangmanScreen, 
                            this.ui.initGame.bind(this.ui, this.currentGame)
                           );
    }
 }
-hangman.ui = new ui(document.getElementById('ui'), () => {hangman.ready = true });
+//user interface
+hangman.ui = new ui(
+   document.getElementById('ui'), () => {hangman.ready = true }
+);
 
-//returns random integer, inclusive 
-function randint(min, max) {
-   return min + Math.floor(Math.random() * (max - min + 1));
-}
+
+
+
+/***************************\
+      Keyboard Events
+\***************************/
 
 //handles keyup on the window
 //calls functions based on state of hangman and hangman.currentgame
@@ -507,7 +570,7 @@ function keyHandler(e){
          hangman.startNewGame();
       }
    }
-   //if current game has finished, y/n keys will...
+   //if current game has finished, y/n keys will
    //either start a new game or go back to home screen
    else if(game.isFinished && game.ready){
       if( keyCode === 89){
@@ -517,8 +580,8 @@ function keyHandler(e){
          game.playAgain(false);
       }
    }
-   //if current game exists and is ready for input,
-   //
+   //if current game exists and is ready for input
+   //and key is a letter, use that letter to guess 
    else if(game.ready){
       if( 65 <= keyCode && keyCode <= 90){
          //guess letter
@@ -531,101 +594,4 @@ function keyHandler(e){
 }
 window.addEventListener('keyup', keyHandler);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//    ,,,      ,,,       ,,,     ,,,     ,,,     ,,,      ,,,
-//   (^_^)    (-_-)     ('_') > (o_o) > (-‸-) > (x‸x)    (-‸-) <sad when miss
-//
-//
-//           (^_^)
-//           \/|\_
-//               
-//   regular eyes could be spans with before/after content that animates
-//
-//
-//  blinking text can be done with spans and animation. 
-//
-//
-//
-//
-//
-//
-//                   You Lose!  Play Again? (y/n)
-//
-//          
-//          
-//         [++]=====[+]
-//          ||       |
-//          ||      ,;, 
-//          ||     ('_')
-//          ||       |
-//          ||      /M\\             word: _ _ _ _ _   _ _ _ _ _ _ _ _ _ _ 
-//          ||     / H \\       
-//          ||       X              misses: a, d, f, 
-//         /++\\     / \\              b, g, h, r, y, u, i,
-//        //||\\\\   /   \\
-//       // || \\\\                   wins: 0
-// =========================================================================
-//          
-//          
-//         [++]=====[+]
-//          ||       |
-//          ||      ,;, 
-//          ||     ('_')            last guess: g
-//          ||       |
-//          ||      /M\             word: _ _ _ _ _   _ _ _ _
-//          ||     / H \       
-//          ||       X              misses: a, d, f, 
-//          ||      / \
-//         /++\    /   \              b, g, h, r, y, u, i,
-//        //||\\      
-//       // || \\                   wins: 0
-// =============================================================
-//
-//
-//         flash>  You Lose!  Play Again? (y/n)
-//
-//          
-//          
-//         [++]=====[+]
-//          ||       |
-//          ||       |
-//          ||      ,;, 
-//          ||     (x‸x)
-//          ||       |
-//          ||      /M\             word: _ _ _ _ _   _ _ _ _
-//          ||      \H/       
-//          ||       X              misses: a, d, f, 
-//         /++\     | |              b, g, h, r, y, u, i,
-//        //||\\    | |
-//       // || \\                   wins: 0        losses: 
-// =============================================================
-//
-//
-/*
-
-
- [++]=======================[++]
-  ||                         ||
-  ||      H A N G M A N      ||
-  ||                         ||
-  ||  Press any key to play  ||   <flash this line
-  ||                         ||
- [++]=======================[++]
-
-
-
-*/
+})();
